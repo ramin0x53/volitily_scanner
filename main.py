@@ -18,7 +18,7 @@ def getAllSymbols():
     data = response.json()
     symbols = []
     for i in data["symbols"]:
-        if "USDT" in i["symbol"]:
+        if "USDT" in i["symbol"] and "UPUSDT" not in i["symbol"] and "DOWNUSDT" not in i["symbol"] and "BULLUSDT" not in i["symbol"] and "BEARUSDT" not in i["symbol"]:
             symbols.append(i["symbol"])
     return symbols
 
