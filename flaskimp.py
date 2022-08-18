@@ -6,6 +6,7 @@ app = Flask(__name__)
 
 lenght = 20
 tf = "1d"
+symbols = []
 
 @app.route("/", methods=["GET"])
 def hello_world():
@@ -24,19 +25,36 @@ def hello_world():
     html = "<p>"
     for i in s:
         html = html + f"{i[0]}:&nbsp&nbsp&nbsp {i[1]}<br>"
+        html = html + "--------------------------------------------------------<br>"
     html = html + "</p>"
     return html
 
 
 def getAllSymbols():
-    url = "https://api.binance.com/api/v1/exchangeInfo"
+    url = "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=volume_desc&per_page=250&page=1&sparkline=false"
+
     response = requests.get(url)
     data = response.json()
-    symbols = []
-    for i in data["symbols"]:
-        if "USDT" in i["symbol"] and "UPUSDT" not in i["symbol"] and "DOWNUSDT" not in i["symbol"] and "BULLUSDT" not in i["symbol"] and "BEARUSDT" not in i["symbol"]:
-            symbols.append(i["symbol"])
-    return symbols
+    result = []
+    for token in data:
+        if "usd" not in token["symbol"]:
+            s = token["symbol"] + "usdt"
+            result.append(s.upper())
+    
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        for symbol in result:
+            executor.submit(binancecheck, symbol)
+    return
+
+def binancecheck(symbol):
+    global symbols
+    url = "https://api.binance.com/api/v1/klines?interval=1h&limit=1&symbol=" + symbol
+    response = requests.get(url)
+    d = response.json()
+    if type(d) != list:
+        return
+    symbols.append(symbol)
 
 #Get a symbol historical data from Binance
 def getHistoricalData(symbol, interval, limit):
@@ -89,7 +107,8 @@ def calVol(symbol, interval, limit):
 
 
 def getAllSymbolVol():
-    symbols = getAllSymbols()
+    global symbols
+    getAllSymbols()
     result = {}
 
     #fill result with CalVol for each symbol with ThreadPool
